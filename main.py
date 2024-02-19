@@ -1,8 +1,10 @@
 from exif import Image
 from datetime import datetime
+from picamera import PiCamera
+from time import sleep
 import cv2
 import math
-
+from datetime import datetime, timedelta
 
 def get_time(image):
     with open(image,'rb') as image_file:
@@ -15,7 +17,7 @@ def get_time(image):
 def get_time_difference(image_1, image_2):
     time_1 = get_time(image_1)
     time_2 = get_time(image_2)
-    tim_difference = time_2 - time_1
+    time_difference = time_2 - time_1
     return time_difference.seconds
 
 
@@ -37,10 +39,6 @@ def calculate_matches(descriptors_1, descriptors_2):
     matches = sorted(matches, key=lambda x: x.distance)
     return matches
 
-
-
-image_1 = 'photo_097_53245989408_o.jpg'
-image_2 = 'photo_098_53245989433_o.jpg'
 
 
 def display_matches(image_1_cv, keypoints_1, image_2_cv, keypoint_2, matches):
@@ -80,12 +78,40 @@ def calculate_speed_in_kmps(feature_distance, GSD, time_difference):
     speed = distance / time_difference
     return speed                                
 
-time_difference = get_time_difference(image_1, image_2) # Get time difference between images
-image_1_cv, image_2_cv = convert_to_cv(image_1, image_2) # Create OpenCV image objects
-keypoints_1, keypoints_2, descriptors_1, descriptors_2 = calculate_features(image_1_cv, image_2_cv, 1000) # Get keypoints and descriptors
-matches = calculate_matches(descriptors_1, descriptors_2) # Match descriptors
-display_matches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches) # Display matches
-coordinates_1, coordinates_2 = find_matching_coordinates(keypoints_1, keypoints_2, matches)
-average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
-speed = calculate_speed_in_kmps(average_feature_distance, 12648, time_difference)
-print(speed)
+camera = PiCamera()
+def take_Picture(id):
+    camera.capture(f"images/photo_{id}.jpg")
+
+
+start_time = datetime.now() #stores start and end to know when to end
+now_time = datetime.now()
+image_id = 0
+while (now_time < start_time + timedelta(minutes = 10)): #take pictures
+    take_Picture(image_id)
+    sleep(15) #takes picture every 15 seconds for 10 minutes to be under 42 limit
+    image_id += 1
+    now_time = datetime.now()
+
+speedArray = [] #keep track of all speeds
+for i in range(0,58):
+    image_1 = f"images/photo_{i}.jpg"
+    image_2 = f"images/photo_{i+1}.jpg"
+    time_difference = get_time_difference(image_1, image_2)  # Get time difference between images
+    image_1_cv, image_2_cv = convert_to_cv(image_1, image_2)  # Create OpenCV image objects
+    keypoints_1, keypoints_2, descriptors_1, descriptors_2 = calculate_features(image_1_cv, image_2_cv,
+                                                                                1000)  # Get keypoints and descriptors
+    matches = calculate_matches(descriptors_1, descriptors_2)  # Match descriptors
+    display_matches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches)  # Display matches
+    coordinates_1, coordinates_2 = find_matching_coordinates(keypoints_1, keypoints_2, matches)
+    average_feature_distance = calculate_mean_distance(coordinates_1, coordinates_2)
+    speed = calculate_speed_in_kmps(average_feature_distance, 12648, time_difference)
+    speedArray.append(speed)
+
+resultsFile = open("result.txt", "w") #create results file
+results = "Recorded speeds: \n"
+for speed in speedArray:
+    results += f"{speed}kmps\n"
+
+results += f"Average speed: {sum(speedArray) / len(speedArray)}kmps\n"
+resultsFile.write(results)
+resultsFile.close()
