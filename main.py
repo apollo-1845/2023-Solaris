@@ -42,12 +42,8 @@ def calculate_matches(descriptors_1, descriptors_2):
 
 
 def display_matches(image_1_cv, keypoints_1, image_2_cv, keypoint_2, matches):
-    match_img = cv2.drawMatches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches[:100, None])
+    match_img = cv2.drawMatches(image_1_cv, keypoints_1, image_2_cv, keypoints_2, matches[:100], None)
     resize = cv2.resize(match_img, (1600,600), interpolation = cv2.INTER_AREA)
-    cv2.imshow('matches', resize)
-    cv2.waitKey(0)
-    cv2.destroyWindow('matches') 
-
 
 def find_matching_coordinates(keypoints_1, keypoints_2, matches):
     coordinates_1 = []
@@ -89,11 +85,12 @@ image_id = 0
 while (now_time < start_time + timedelta(minutes = 10)): #take pictures
     take_Picture(image_id)
     sleep(15) #takes picture every 15 seconds for 10 minutes to be under 42 limit
-    image_id += 1
+    image_id = image_id + 1
     now_time = datetime.now()
 
+camera.close()
 speedArray = [] #keep track of all speeds
-for i in range(0,58):
+for i in range(0,image_id-1):
     image_1 = f"images/photo_{i}.jpg"
     image_2 = f"images/photo_{i+1}.jpg"
     time_difference = get_time_difference(image_1, image_2)  # Get time difference between images
@@ -108,10 +105,6 @@ for i in range(0,58):
     speedArray.append(speed)
 
 resultsFile = open("result.txt", "w") #create results file
-results = "Recorded speeds: \n"
-for speed in speedArray:
-    results += f"{speed}kmps\n"
-
-results += f"Average speed: {sum(speedArray) / len(speedArray)}kmps\n"
+results += sum(speedArray) / len(speedArray)
 resultsFile.write(results)
 resultsFile.close()
